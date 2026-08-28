@@ -9,7 +9,7 @@
 # - `test_data_formats.py` runs `splash --labels` / `--header` (and temp
 #   `splash to ascii`) for one small dump per reader
 #
-# The Phantom dump used for renders lives in that repo (`datafiles/binary_00000`).
+# The Phantom dump used for renders lives in that repo (`dataformats/phantom/binary_00000`).
 # Format fixtures live under `dataformats/` with expectations in
 # `expected_formats.json`.
 #

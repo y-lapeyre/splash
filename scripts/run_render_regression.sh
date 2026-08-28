@@ -16,7 +16,7 @@ WORK_DIR="${WORK_DIR:-.}"
 DUMP="${DUMP_NAME:-binary_00000}"
 PREFIX=render_testing
 CONFIG_SRC="${TESTDATA_DIR}/config"
-DUMP_SRC="${TESTDATA_DIR}/datafiles/${DUMP}"
+DUMP_SRC="${TESTDATA_DIR}/dataformats/phantom/${DUMP}"
 # Phantom binary dump (override with SPLASH_FORMAT if needed)
 FORMAT="${SPLASH_FORMAT:-phantom}"
 
