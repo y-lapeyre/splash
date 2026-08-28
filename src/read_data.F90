@@ -35,7 +35,7 @@ module readdata
  use readdata_VINE,         only:read_data_VINE,         set_labels_VINE
  use readdata_sro,          only:read_data_sro,          set_labels_sro
  use readdata_dragon,       only:read_data_dragon,       set_labels_dragon
- use readdata_seren,        only:read_data_seren,        set_labels_seren
+ use readdata_seren,        only:read_data_seren,        set_labels_seren, file_format_is_seren
  use readdata_tipsy,        only:read_data_tipsy,        set_labels_tipsy, file_format_is_tipsy
  use readdata_mhutch,       only:read_data_mhutch,       set_labels_mhutch
  use readdata_UCLA,         only:read_data_UCLA,         set_labels_UCLA
@@ -60,11 +60,15 @@ module readdata
 #ifdef HDF5
  use readdata_phantom_hdf5, only:read_data_phantom_hdf5, set_labels_phantom_hdf5, &
                                  file_format_is_phantom_hdf5
- use readdata_amuse_hdf5,   only:read_data_amuse_hdf5,   set_labels_amuse_hdf5
- use readdata_cactus_hdf5,  only:read_data_cactus_hdf5,  set_labels_cactus_hdf5
-! use readdata_falcON_hdf5,  only:read_data_falcON_hdf5,  set_labels_falcON_hdf5
+ use readdata_amuse_hdf5,   only:read_data_amuse_hdf5,   set_labels_amuse_hdf5, &
+                                 file_format_is_amuse_hdf5
+ use readdata_cactus_hdf5,  only:read_data_cactus_hdf5,  set_labels_cactus_hdf5, &
+                                 file_format_is_cactus_hdf5
+ use readdata_falcON_hdf5,  only:read_data_falcON_hdf5,  set_labels_falcON_hdf5, &
+                                 file_format_is_falcon_hdf5
  use readdata_flash_hdf5,   only:read_data_flash_hdf5,   set_labels_flash_hdf5
- use readdata_gadget_hdf5,  only:read_data_gadget_hdf5,  set_labels_gadget_hdf5
+ use readdata_gadget_hdf5,  only:read_data_gadget_hdf5,  set_labels_gadget_hdf5, &
+                                 file_format_is_gadget_hdf5
 #endif
 
  ! Same for FITS files
@@ -308,9 +312,9 @@ subroutine select_data_format(string_in,ierr)
    read_data=>read_data_amuse_hdf5
    set_labels=>set_labels_amuse_hdf5
 
-! case('falcon_hdf5', 'falconhdf5', 'falcon')
-!   read_data=>read_data_falcON_hdf5
-!   set_labels=>set_labels_falcON_hdf5
+ case('falcon_hdf5', 'falconhdf5', 'falcon')
+   read_data=>read_data_falcON_hdf5
+   set_labels=>set_labels_falcON_hdf5
 
  case('flash_hdf5', 'flashhdf5', 'flash')
    read_data=>read_data_flash_hdf5
@@ -500,10 +504,18 @@ subroutine guess_format_from_file_header(filename,ierr)
     call select_data_format('sphNG',ierr)
  elseif (file_format_is_gadget(filename)) then
     call select_data_format('gadget',ierr)
+ elseif (file_format_is_seren(filename)) then
+    call select_data_format('seren',ierr)
 #ifdef HDF5
+ elseif (file_format_is_falcon_hdf5(filename)) then
+    call select_data_format('falcon',ierr)
  elseif (file_format_is_phantom_hdf5(filename)) then
     call select_data_format('phantom_hdf5',ierr)
- elseif (index(filename,'.hdf5') > 0 .or. index(filename,'.h5') > 0) then
+ elseif (file_format_is_amuse_hdf5(filename)) then
+    call select_data_format('amuse_hdf5',ierr)
+ elseif (file_format_is_cactus_hdf5(filename)) then
+    call select_data_format('cactus_hdf5',ierr)
+ elseif (file_format_is_gadget_hdf5(filename)) then
     call select_data_format('gadget_hdf5',ierr)
 #endif
  elseif (file_format_is_ndspmhd(filename)) then

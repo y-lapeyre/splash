@@ -107,6 +107,12 @@ module falcONhdf5read
    import
    integer(c_int), intent(out) :: ierr
   end subroutine read_falcON_snapshot
+
+  ! return 1 if file is falcon HDF5
+  integer(c_int) function falcon_is_falcon_file(filename) bind(c,name="falcon_is_falcon_file")
+   import
+   character(c_char), intent(in) :: filename(*)
+  end function falcon_is_falcon_file
  end interface
 
 contains
@@ -153,19 +159,19 @@ end module falcONhdf5read
 
 module readdata_falcON_hdf5
  implicit none
- 
- public :: read_data_falcON_hdf5, set_labels_falcON_hdf5
- 
- private 
+
+ public :: read_data_falcON_hdf5, set_labels_falcON_hdf5, file_format_is_falcon_hdf5
+
+ private
 contains
 
 subroutine read_data_falcON_hdf5(rootname,istepstart,ipos,nstepsread)
- use particle_data,  only:dat,npartoftype,masstype,time,gamma,maxpart,maxcol
- use params,         only:doub_prec,maxparttypes !,maxplot
+ use particle_data,  only:dat,npartoftype,masstype,time,gamma,maxpart,maxcol,headervals
+ use params,         only:doub_prec,maxparttypes
  use settings_data,  only:ndim,ndimV,ncolumns,ncalc,ipartialread, &
                            ntypes,debugmode,iverbose,buffer_steps_in_file
  use mem_allocation, only:alloc
- use labels,         only:print_types,labeltype
+ use labels,         only:print_types,labeltype,headertags
  use system_utils,   only:lenvironment
  use asciiutils,     only:cstring
  use dataread_utils, only:check_range
@@ -320,6 +326,14 @@ subroutine read_data_falcON_hdf5(rootname,istepstart,ipos,nstepsread)
        enddo
        time(i) = real(timetemp)
        masstype(:,i) = 0. ! all masses read from file
+       !
+       !--copy named header fields for --header / legends
+       !
+       headertags(1:4) = (/'time  ','npart ','ntypes','gamma '/)
+       headervals(1,i) = real(timetemp)
+       headervals(2,i) = real(ntoti)
+       headervals(3,i) = real(ntypes)
+       headervals(4,i) = 5./3.
     endif
     !
     ! read particle data
@@ -520,4 +534,22 @@ subroutine set_splash_particle_label(itypec,name) bind(c)
  labeltype(itypemap_falcON(itypec+1)) = trim(fstring(name))
 
 end subroutine set_splash_particle_label
+
+!-----------------------------------------------------------------
+! return true if filename is a falcon HDF5 dump
+!-----------------------------------------------------------------
+logical function file_format_is_falcon_hdf5(filename) result(is_falcon)
+ use asciiutils,     only:cstring
+ use falcONhdf5read, only:falcon_is_falcon_file
+ use, intrinsic :: iso_c_binding, only:c_int
+ character(len=*), intent(in) :: filename
+ integer(c_int) :: isf
+
+ is_falcon = .false.
+ if (index(filename,'.h5') == 0 .and. index(filename,'.hdf5') == 0) return
+ isf = falcon_is_falcon_file(cstring(filename))
+ is_falcon = (isf == 1)
+
+end function file_format_is_falcon_hdf5
+
 end module readdata_falcON_hdf5

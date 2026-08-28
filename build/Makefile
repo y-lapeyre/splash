@@ -415,8 +415,8 @@ READFILES_HDF5= hdf5_helper_utils.c             read_data_gadget_hdf5_utils.c   
                 read_data_cactus_hdf5_utils.c   read_data_cactus_hdf5_futils.f90   read_data_cactus_hdf5.f90 \
                 read_data_flash_hdf5_utils.c    read_data_flash_hdf5.f90 \
                 read_phantom_hdf5_utils.c       read_data_phantom_hdf5.f90 \
-                read_composition_hdf5.f90
-                #read_data_falcON_hdf5_utils.cc  read_data_falcON_hdf5_utils.f90    read_data_falcON_hdf5.f90 \
+                read_composition_hdf5.f90 \
+                read_data_falcON_hdf5_utils.c   read_data_falcON_hdf5.f90
 
 READFILES_FITS= write_fits.f90 read_data_fits.f90
 
@@ -531,16 +531,7 @@ all: checksystem $(RUN_CHECKS) $(OBJECTS) read_data.o
 	@echo "   alias tsplash='splash -f tipsy' ";
 	@echo "   alias msplash='splash -f mhutch' "; echo;
 
-#---falcON HDF5 read ---
-falcon: falcON
-
-falcON: falcON_hdf5
-
-falcON_hdf5: checksystem checkhdf5 $(OBJECTS) read_data_falcON_hdf5_utils.o read_data_falcON_hdf5.o
-	$(FC) $(FFLAGS) -o $(BINDIR)/fsplash $(OBJECTS) read_data_falcON_hdf5_utils.o read_data_falcON_hdf5.o $(LDFLAGS) $(PIELDFLAGS) $(CXXLIBS) $(HDF5LIBS) -lhdf5_cpp
-
-read_data_falcON_hdf5_utils.o: read_data_falcON_hdf5_utils.cc
-	$(CXX) $(CXXFLAGS)  -std=c++11 $(HDF5INCLUDE) -c $< -o $@
+#---falcON HDF5 read (now compiled as C and included in the main binary) ---
 
 
 

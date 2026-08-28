@@ -37,6 +37,11 @@ module cactushdf5read
    integer(kind=c_int), intent(out) :: ierr
   end subroutine close_cactus_hdf5_file
 
+  integer(c_int) function cactus_hdf5_is_cactus_file(filename) bind(c)
+   import
+   character(kind=c_char), dimension(*), intent(in) :: filename
+  end function cactus_hdf5_is_cactus_file
+
  end interface
 
 contains

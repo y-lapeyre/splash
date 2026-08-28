@@ -1420,7 +1420,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
  use sphNGread
  use lightcurve_utils, only:get_temp_from_u,ionisation_fraction,get_opacity
  use readcomposition,  only:check_for_composition_file,read_composition
- use byteswap,         only:bs
+ use byteswap,         only:bs,open_unformatted_endian
  use part_utils,       only:locate_nth_particle_of_type
  integer, intent(in)  :: indexstart,iposn
  integer, intent(out) :: nstepsread
@@ -1458,6 +1458,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
  real :: xHIi,xHIIi,xHeIi,xHeIIi,xHeIIIi,nei,m1,rad_corotate
  logical :: skip_corrupted_block_3,get_temperature,get_kappa,get_kappa_tot
  logical :: get_ionfrac,need_to_allocate_iphase,need_to_allocate_iorig,got_tag,got_iorig
+ logical :: other_endian
  integer(kind=8), dimension(:), allocatable :: iorig
  character(len=lentag) :: tagsreal(maxinblock), tagtmp
 
@@ -1558,7 +1559,8 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
 !
 !--open the (unformatted) binary file
 !
- open(unit=iunit,iostat=ierr,file=dumpfile,status='old',form='unformatted')
+ other_endian = .false.
+ call open_unformatted_endian(iunit,dumpfile,ierr,other_endian)
  if (ierr /= 0) then
     print "(a)",'*** ERROR OPENING '//trim(dumpfile)//' ***'
     return
@@ -1570,11 +1572,22 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
     read(iunit,iostat=ierr) intg1,r8,int2,iversion,int3
     if (intg1 /= 690706 .and. intg1 /= 060769) then
        if (bs(intg1)==690706 .or. bs(intg1)==060769) then
-          print "(a)",'*** ERROR: file is wrong endian, try:'
-          print "(/,4x,a,/,/,6x,a,/)",'export GFORTRAN_CONVERT_UNIT=big_endian','or, with ifort:'
-          print "(4x,a)",'export F_UFMTENDIAN=big'
+          print "(a)",' file is opposite endian: reopening with byte swap'
           close(iunit)
-          return
+          other_endian = .true.
+          call open_unformatted_endian(iunit,dumpfile,ierr,other_endian)
+          if (ierr /= 0) then
+             print "(a)",'*** ERROR OPENING '//trim(dumpfile)//' ***'
+             return
+          endif
+          read(iunit,iostat=ierr) intg1,r8,int2,iversion,int3
+          if (intg1 /= 690706 .and. intg1 /= 060769) then
+             print "(a)",'*** ERROR: file is wrong endian, try:'
+             print "(/,4x,a,/,/,6x,a,/)",'export GFORTRAN_CONVERT_UNIT=big_endian','or, with ifort:'
+             print "(4x,a)",'export F_UFMTENDIAN=big'
+             close(iunit)
+             return
+          endif
        else
           print "(a)",'*** ERROR READING HEADER: corrupt file/zero size/wrong endian?'
           close(iunit)
@@ -1606,7 +1619,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
     if (.not.lenvironment('SSPLASH_IGNORE_IVERSION')) then
        print "(2(/,a))",'   ** press any key to bravely proceed anyway ** ', &
                           '   (set SSPLASH_IGNORE_IVERSION=yes to silence this warning)'
-       read*
+       read(*,iostat=ierr)
     endif
  endif
 !
@@ -2282,8 +2295,10 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
  goto 34
 33 continue
  print "(/,1x,a,/)",'*** WARNING: END OF FILE DURING READ ***'
- print*,'Press any key to continue (but there is likely something wrong with the file...)'
- read*
+ if (iverbose >= 0) then
+    print*,'Press any key to continue (but there is likely something wrong with the file...)'
+    read(*,iostat=ierr)
+ endif
 34 continue
 
  !
@@ -2375,7 +2390,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
        if (phantomdump) then
           print*,'ERROR: low memory mode will not work correctly with phantom + multiple types'
           print*,'press any key to ignore this and continue anyway (at your own risk...)'
-          read*
+          read(*,iostat=ierr)
        endif
 !
 !--place point masses after normal particles

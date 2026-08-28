@@ -559,14 +559,15 @@ subroutine set_sink_reff_and_teff(dat,npartoftype,iamtype,nsteps,ntypes)
 
  itype = get_sink_type(ntypes)
  if (itype <= 0 .or. (ih <= 0 .and. itemp <= 0)) return
+ if (itype > size(npartoftype,1)) return
 
- nsink = maxval(npartoftype(itype,:))
+ nsink = maxval(npartoftype(itype,1:min(nsteps,size(npartoftype,2))))
  if (nsink <= 0) return
 
  allocate(reff_list(nsink),teff_list(nsink))
  reff_list = renvlist('SPLASH_REFF',nsink,errval=-666.)
  teff_list = renvlist('SPLASH_TEFF',nsink,errval=-666.)
- do j=1,nsteps
+ do j=1,min(nsteps,size(npartoftype,2))
     do i=1,npartoftype(itype,j)
        call locate_nth_particle_of_type(i,isinkpos,itype,iamtype(:,j),npartoftype(:,j),ntot)
        if (isinkpos <= 0) cycle

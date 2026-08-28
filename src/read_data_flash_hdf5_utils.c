@@ -24,6 +24,10 @@ void read_flash_hdf5_header(char *filename, float *time, int *npart, int *ncol, 
    herr_t    status;
    herr_t    HDF5_error = -1;
 
+   *ierr = 0;
+   *npart = 0;
+   *ncol = 0;
+   *time = 0.0f;
    //printf(" opening %s \n",filename);
    file_id = H5Fopen(filename,H5F_ACC_RDONLY,H5P_DEFAULT);
    if (file_id == HDF5_error)
@@ -39,7 +43,7 @@ void read_flash_hdf5_header(char *filename, float *time, int *npart, int *ncol, 
 #endif
 
    if (dataset_id == HDF5_error)
-      { printf("ERROR opening tracer particle data set \n"); *ierr = 2; return; }
+      { printf("ERROR opening tracer particle data set \n"); H5Fclose(file_id); *ierr = 2; return; }
 
    dataspace_id = H5Dget_space(dataset_id);
 
@@ -144,7 +148,7 @@ void read_flash_hdf5_data(char *filename, int *npart, int *ncol, int *isrequired
 #endif
 
    if (dataset_id == HDF5_error)
-      { printf("ERROR opening tracer particle data set \n"); *ierr = 2; return; }
+      { printf("ERROR opening tracer particle data set \n"); H5Fclose(file_id); *ierr = 2; return; }
 
    dataspace_id = H5Dget_space(dataset_id);
 
@@ -237,7 +241,7 @@ void read_flash_hdf5_data(char *filename, int *npart, int *ncol, int *isrequired
 #endif
 
    if (dataset_id == HDF5_error)
-      { printf("ERROR opening tracer particle data set \n"); *ierr = 2; return; }
+      { printf("ERROR opening tracer particle data set \n"); H5Fclose(file_id); *ierr = 2; return; }
 
 #if H5_VERSION_GE(1,8,0)
       SPHdataset_id = H5Dopen2(file_id,"SPH_density",H5P_DEFAULT);

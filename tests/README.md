@@ -1,12 +1,17 @@
-# CLI render regression tests
-# ===========================
+# CLI regression tests
+# ====================
 #
-# This directory contains both Fortran unit tests
-# and a regression testing script that runs `splash` on a binary dump from phantom, 
-# writes pngs, and compare `imagehash.phash` distances to expectations in
-# https://github.com/danieljprice/splash-testdata (latest `main`).
+# This directory contains Fortran unit tests plus pytest CLI tests that run
+# `splash` against dumps in https://github.com/danieljprice/splash-testdata
+# (latest `main`):
 #
-# The Phantom dump used for renders lives in that repo (`datafiles/binary_00000`)
+# - `test_render_regression.py` compares PNG `imagehash.phash` distances
+# - `test_data_formats.py` runs `splash --labels` / `--header` (and temp
+#   `splash to ascii`) for one small dump per reader
+#
+# The Phantom dump used for renders lives in that repo (`datafiles/binary_00000`).
+# Format fixtures live under `dataformats/` with expectations in
+# `expected_formats.json`.
 #
 # ## Dependencies (CI uses apt + unpinned pip)
 #
@@ -33,10 +38,14 @@
 #
 # 3. Generate renders and run pytest:
 #
+#        export PATH=$PWD/bin:$PATH
 #        export SPLASH_TESTDATA=$PWD/splash-testdata
 #        export SPLASH_WORK_DIR=$PWD/test_data
 #        ./scripts/run_render_regression.sh
 #        python3 -m pytest -v tests/
+#
+# Format tests (`test_data_formats.py`) only need `splash` on PATH and
+# `SPLASH_TESTDATA`. They do not require the render script.
 #
 # ## Updating expected hashes
 #

@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 #include <hdf5.h>
 #include <math.h>
 
@@ -460,4 +461,39 @@ int read_cactus_grid(hid_t dataset_id,hid_t dataspace_id,int ndim,int mycol,int 
    free(dat);
 
    return ierr;
+}
+
+/*
+ * return 1 if filename looks like Cactus/Carpet HDF5
+ * (object names contain " it=" " tl=" " rl=")
+ */
+int cactus_hdf5_is_cactus_file(char *filename)
+{
+    hid_t file_id;
+    hsize_t ndatasets[1];
+    int i, n_datasets, is_cactus = 0;
+    char name[LEN_NAME];
+    char thorn[LEN_NAME];
+    int it, tl, level, cnum;
+    herr_t HDF5_error = -1;
+
+    file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
+    if (file_id == HDF5_error)
+        return 0;
+
+    H5Gget_num_objs(file_id, ndatasets);
+    n_datasets = (int)ndatasets[0];
+    if (n_datasets > 64) n_datasets = 64; /* enough to decide */
+
+    for (i = 0; i < n_datasets; i++) {
+        H5Gget_objname_by_idx(file_id, i, name, LEN_NAME);
+        it = -1;
+        if (sscanf(name, "%s it=%i tl=%i rl=%i c=%i",
+                   thorn, &it, &tl, &level, &cnum) >= 4) {
+            is_cactus = 1;
+            break;
+        }
+    }
+    H5Fclose(file_id);
+    return is_cactus;
 }
