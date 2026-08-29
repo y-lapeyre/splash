@@ -30,8 +30,8 @@ pip3 install pytest pillow imagehash
 
 ## Workflow run
 
-Regression testing is performed automatically in GitHub Actions via
-`.github/workflows/regression.yml`.
+Tests are run automatically in GitHub Actions via
+`.github/workflows/test.yml`.
 
 ## Local run
 
