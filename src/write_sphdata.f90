@@ -159,6 +159,12 @@ subroutine write_sphdump(time,gamma,dat,npart,ntypes,npartoftype,masstype,itype,
        fmtstringlab = '(''#'',1x,'//trim(adjustl(fmtstringlab))//')'
     endif
 
+    if (size(itype) > 1 .and. size(itype) < npart) then
+       print "(a,i0,a,i0)",' *** ERROR: itype array (',size(itype), &
+            ') smaller than npart (',npart,') ***'
+       return
+    endif
+
     open(unit=iunit,file=trim(filename)//trim(ext),status='replace',form='formatted',iostat=ierr)
     if (ierr /= 0) then
        print "(a)",' ERROR OPENING FILE FOR WRITING'
@@ -185,7 +191,6 @@ subroutine write_sphdump(time,gamma,dat,npart,ntypes,npartoftype,masstype,itype,
     x0 = xorigin(:)  ! note that it is not currently possible to do splash to ascii
     v0 = 0.          ! with coords set relative to a tracked particle, so just use xorigin
     nwrite = npart
-    if (size(itype) > 1) nwrite = min(nwrite,size(itype))
 
     if (size(itype) > 1) then
        write(iunit,fmtstringlab,iostat=ierr) label(iorder(1:ncols)),'itype'

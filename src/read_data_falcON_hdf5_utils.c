@@ -70,6 +70,7 @@ static ParticleSet Parts[MAX_PARTS];
 static int         NumParts   = 0;
 static FieldEntry  Fields[MAX_FIELDS];
 static int         NumFields  = 0;
+static int         falcON_read_error = 0;
 
 /*-----------------------------------------------------------------------
  *  Helpers
@@ -164,9 +165,7 @@ static void read_column(const char *field, hsize_t comp, hsize_t dims)
         if (!select_field(field, Parts[type].name)) continue;
 
         /* try to open the dataset; skip silently if absent */
-        H5E_BEGIN_TRY {
-            dset = H5Dopen2(Parts[type].group_id, field, H5P_DEFAULT);
-        } H5E_END_TRY;
+        dset = H5Dopen2(Parts[type].group_id, field, H5P_DEFAULT);
         if (dset < 0) continue;
 
         space = H5Dget_space(dset);
@@ -174,7 +173,17 @@ static void read_column(const char *field, hsize_t comp, hsize_t dims)
         H5Sget_simple_extent_dims(space, count, NULL);
         ndat = (int)Parts[type].number;
 
-        buf = (double *)realloc(buf, (size_t)ndat * sizeof(double));
+        {
+            double *newbuf = (double *)realloc(buf, (size_t)ndat * sizeof(double));
+            if (!newbuf && ndat > 0) {
+                free(buf);
+                falcON_read_error = 1;
+                H5Sclose(space);
+                H5Dclose(dset);
+                return;
+            }
+            buf = newbuf;
+        }
 
         if (dims == 1) {
             /* scalar field: read the whole thing */
@@ -290,9 +299,7 @@ void open_falcON_file(const char *filename, int *ierr)
     }
 
     /* open HDF5 file */
-    H5E_BEGIN_TRY {
-        FileId = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-    } H5E_END_TRY;
+    FileId = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
     if (FileId < 0) {
         if (Debug)
             fprintf(stderr, "open_falcON_file(): cannot open '%s'\n", filename);
@@ -300,9 +307,7 @@ void open_falcON_file(const char *filename, int *ierr)
     }
 
     /* verify this is a falcON snapshot by checking for the attribute */
-    H5E_BEGIN_TRY {
-        attr = H5Aopen(FileId, "falcON", H5P_DEFAULT);
-    } H5E_END_TRY;
+    attr = H5Aopen(FileId, "falcON", H5P_DEFAULT);
     if (attr < 0) {
         if (Debug)
             fprintf(stderr, "open_falcON_file(): '%s' is not a falcON file\n",
@@ -314,9 +319,7 @@ void open_falcON_file(const char *filename, int *ierr)
     H5Aclose(attr);
 
     /* read number of snapshots */
-    H5E_BEGIN_TRY {
-        attr = H5Aopen(FileId, "num_snapshots", H5P_DEFAULT);
-    } H5E_END_TRY;
+    attr = H5Aopen(FileId, "num_snapshots", H5P_DEFAULT);
     if (attr < 0) {
         if (Debug)
             fprintf(stderr, "open_falcON_file(): missing num_snapshots\n");
@@ -324,7 +327,12 @@ void open_falcON_file(const char *filename, int *ierr)
         FileId = -1;
         return;
     }
-    H5Aread(attr, H5T_NATIVE_UINT32, &ns);
+    if (H5Aread(attr, H5T_NATIVE_UINT32, &ns) < 0) {
+        H5Aclose(attr);
+        H5Fclose(FileId);
+        FileId = -1;
+        return;
+    }
     H5Aclose(attr);
     NumSnap = (int)ns;
     *ierr = 0;
@@ -345,14 +353,12 @@ int falcon_is_falcon_file(const char *filename)
 
     if (filename == NULL || filename[0] == '\0') return 0;
 
-    H5E_BEGIN_TRY {
-        file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-    } H5E_END_TRY;
+    H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+
+    file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
     if (file_id < 0) return 0;
 
-    H5E_BEGIN_TRY {
-        attr = H5Aopen(file_id, "falcON", H5P_DEFAULT);
-    } H5E_END_TRY;
+    attr = H5Aopen(file_id, "falcON", H5P_DEFAULT);
     if (attr >= 0) {
         is_falcon = 1;
         H5Aclose(attr);
@@ -403,9 +409,7 @@ static herr_t count_fields_cb(hid_t group_id, const char *name,
 
     (void)info; /* unused */
 
-    H5E_BEGIN_TRY {
-        dset = H5Dopen2(group_id, name, H5P_DEFAULT);
-    } H5E_END_TRY;
+    dset = H5Dopen2(group_id, name, H5P_DEFAULT);
     if (dset < 0) return 0;
 
     space = H5Dget_space(dset);
@@ -453,25 +457,34 @@ void open_falcON_snapshot(int *ntype, int npart[MAX_NUM_TYPES],
 
     sprintf(snapname, "snapshot%d", IndexSnap++);
 
-    H5E_BEGIN_TRY {
-        snap_id = H5Gopen2(FileId, snapname, H5P_DEFAULT);
-    } H5E_END_TRY;
+    snap_id = H5Gopen2(FileId, snapname, H5P_DEFAULT);
     if (snap_id < 0) return;
 
     /* read time attribute */
     attr = H5Aopen(snap_id, "time", H5P_DEFAULT);
-    H5Aread(attr, H5T_NATIVE_DOUBLE, timeval);
+    if (attr < 0) {
+        H5Gclose(snap_id);
+        return;
+    }
+    if (H5Aread(attr, H5T_NATIVE_DOUBLE, timeval) < 0) {
+        H5Aclose(attr);
+        H5Gclose(snap_id);
+        return;
+    }
     H5Aclose(attr);
 
     /* read hper attribute (periodic half-periods) */
-    {
-        hid_t arr_type = H5Tarray_create2(H5T_NATIVE_DOUBLE, 1,
-                                           (hsize_t[]){3});
-        attr = H5Aopen(snap_id, "hper", H5P_DEFAULT);
-        H5Aread(attr, arr_type, hper);
-        H5Aclose(attr);
-        H5Tclose(arr_type);
+    attr = H5Aopen(snap_id, "hper", H5P_DEFAULT);
+    if (attr < 0) {
+        H5Gclose(snap_id);
+        return;
     }
+    if (H5Aread(attr, H5T_NATIVE_DOUBLE, hper) < 0) {
+        H5Aclose(attr);
+        H5Gclose(snap_id);
+        return;
+    }
+    H5Aclose(attr);
 
     /* iterate over particle types */
     for (i = 0; i < MAX_PARTS; i++) {
@@ -479,18 +492,14 @@ void open_falcON_snapshot(int *ntype, int npart[MAX_NUM_TYPES],
         sprintf(nname, "N%s", types[i]);
 
         number = 0;
-        H5E_BEGIN_TRY {
-            attr = H5Aopen(snap_id, nname, H5P_DEFAULT);
-        } H5E_END_TRY;
+        attr = H5Aopen(snap_id, nname, H5P_DEFAULT);
         if (attr >= 0) {
-            H5Aread(attr, H5T_NATIVE_UINT32, &number);
+            if (H5Aread(attr, H5T_NATIVE_UINT32, &number) < 0) number = 0;
             H5Aclose(attr);
         }
         if (number == 0) continue;
 
-        H5E_BEGIN_TRY {
-            part_grp = H5Gopen2(snap_id, types[i], H5P_DEFAULT);
-        } H5E_END_TRY;
+        part_grp = H5Gopen2(snap_id, types[i], H5P_DEFAULT);
         if (part_grp < 0) continue;
 
         Parts[NumParts].group_id = part_grp;
@@ -524,10 +533,15 @@ void read_falcON_snapshot(int *ierr)
     int *done; /* flags for fields already read */
     int  type;
 
+    falcON_read_error = 0;
     *ierr = 0;
     npreferred = (int)(sizeof(preferred) / sizeof(preferred[0]));
 
     done = (int *)calloc((size_t)NumFields, sizeof(int));
+    if (!done) {
+        *ierr = 1;
+        return;
+    }
 
     /* read preferred fields first */
     for (i = 0; i < npreferred; i++) {
@@ -544,6 +558,8 @@ void read_falcON_snapshot(int *ierr)
     }
 
     free(done);
+
+    if (falcON_read_error) *ierr = 1;
 
     /* set particle type labels */
     for (type = 0; type < NumParts; type++)

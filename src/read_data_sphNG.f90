@@ -2310,7 +2310,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
  !
  if (phantomdump .and. idivvxcol /= 0 .and. any(required(idivvxcol:icurlvzcol))) then
     print "(a)",' reading divv from '//trim(dumpfile)//'.divv'
-    open(unit=66,file=trim(dumpfile)//'.divv',form='unformatted',status='old',iostat=ierr)
+    call open_unformatted_endian(66,trim(dumpfile)//'.divv',ierr,other_endian)
     if (ierr /= 0) then
        print "(a)",' ERROR opening '//trim(dumpfile)//'.divv'
     else
@@ -2360,6 +2360,11 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
                 if (dat(i,ih,j) <= 0. .and. itype /= itypemap_sink_phantom) iamtype(i,j) = itypemap_unknown_phantom
              endif
           enddo
+          if (nptmasstot > 0) then
+             do i=npart+1,npart+nptmasstot
+                iamtype(i,j) = int(itypemap_sink_phantom,kind=int1)
+             enddo
+          endif
        else
           !
           !--sphNG: translate iphase to splash types
@@ -2522,9 +2527,27 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
     npartoftype(5,j) = nstar
     npartoftype(6,j) = nunknown
  else
-    if (debug) print*,' DEBUG: nunknown = ',nunknown
-    npartoftype(1,j) = npartoftype(1,j) - nunknown
-    npartoftype(itypemap_unknown_phantom,j) = npartoftype(itypemap_unknown_phantom,j) + nunknown
+    if (size(iamtype(:,j)) > 1) then
+       !
+       !--reconcile npartoftype with particles actually read; header npartoftype
+       !  tags can exceed npart+nptmasstot when dump bookkeeping is stale (e.g.
+       !  accreted particles removed from the array but still counted in header)
+       !
+       npartoftype(:,j) = 0
+       do i=1,npart
+          itype = int(iamtype(i,j))
+          if (itype >= 1 .and. itype <= ntypes) then
+             npartoftype(itype,j) = npartoftype(itype,j) + 1
+          else
+             npartoftype(itypemap_unknown_phantom,j) = npartoftype(itypemap_unknown_phantom,j) + 1
+          endif
+       enddo
+       if (nptmasstot > 0) npartoftype(itypemap_sink_phantom,j) = nptmasstot
+    else
+       if (debug) print*,' DEBUG: nunknown = ',nunknown
+       npartoftype(1,j) = npartoftype(1,j) - nunknown
+       npartoftype(itypemap_unknown_phantom,j) = npartoftype(itypemap_unknown_phantom,j) + nunknown
+    endif
  endif
 
 

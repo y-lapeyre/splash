@@ -241,7 +241,7 @@ void read_flash_hdf5_data(char *filename, int *npart, int *ncol, int *isrequired
 #endif
 
    if (dataset_id == HDF5_error)
-      { printf("ERROR opening tracer particle data set \n"); H5Fclose(file_id); *ierr = 2; return; }
+      { printf("ERROR opening tracer particle data set \n"); free(tempid); free(temp); H5Fclose(file_id); *ierr = 2; return; }
 
 #if H5_VERSION_GE(1,8,0)
       SPHdataset_id = H5Dopen2(file_id,"SPH_density",H5P_DEFAULT);

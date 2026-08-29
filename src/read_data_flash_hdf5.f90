@@ -164,6 +164,11 @@ subroutine read_data_flash_hdf5(dumpfile,indexstart,ipos,nstepsread)
     nstepsread = 0
     return
  endif
+ if (ncolstep <= 5) then
+    print "(a)",' *** ERROR: invalid FLASH HDF5 column count ***'
+    nstepsread = 0
+    return
+ endif
  ncolstep = ncolstep - 1   ! subtract particle ID column
  print "(a,i10,a,es10.3,a,i2)",' npart = ',nprint,' time = ',tread
 
