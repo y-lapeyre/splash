@@ -1,5 +1,5 @@
-# CLI render regression (black-box splash + perceptual hash)
-name: regression
+# CLI tests (regression test on standard output plots + data format readers)
+name: test
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
     branches: [main]
 
 jobs:
-  render-regression:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -68,6 +68,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: render-regression-pngs
+          name: test-render-pngs
           path: test_data/*.png
           if-no-files-found: ignore
