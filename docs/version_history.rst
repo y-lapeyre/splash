@@ -1,11 +1,37 @@
 
+**4.0.0: (31/08/26)**
+
+- user-friendly interactive mode
+- interactive buttons now appear in the plotting window
+- cursor movement generates context-dependent help
+- cube viz: slice through data using scroll wheel on your mouse
+- streamline plotting by default for vector plots
+- automatically detect and read phantom hdf5 chemistry data
+- allow simultaneous log of all abundance columns when chemistry data is present
+- added --limits=min,max flag and --xmin,--xmax flags to override limits in splash.limits file
+- added --lim=1.0 flag to set coordinate limits to centred box
+- flags --xminmargin,--xmaxmargin,--yminmargin,--ymaxmargin to adjust page margins
+- vector plot legend defaults to the same vertical position as the time legend
+- fixed bugs with utf8 symbols in giza, copyright symbol added to copyright string
+- splash to ndspmhd converter added
+- splash compiles with aocc compiler, added CI checks for ifx and aocc compilers
+- new /osx device for interactive plotting on macOS
+
+**3.12.0: (16/03/26)**
+
+- sub-pixel interpolation in splash to grid for non-Cartesian geometries
+- added --fcol flag in splash calc lightcurve for spectral hardening factor
+- seg fault in splash to grid fixed
+- automatically read visual extinction from AV_ files alongside phantom dumps
+- splash can now be compiled in parallel with make -j flag
+- added a column for kappa^2/omega^2 when plotting in cylindrical coordinates
+
 **3.11.7: (15/12/25)**
 
 - option for nonlinear corrections to Rafikov planet wake exact solution
 - automated plotting of .trajectory files from phantom orbit reconstructor^TM Shamrock native .sham data reader implemented
 - --shift=x,y,z flag to centre on sink but shift it to a different position
 - issues with template and license files fixed (thanks to Phil Wyett)
-- vector plots default to evenly-spaced streamlines; arrows remain as a style option
 
 **3.11.6: (30/10/25)**
 

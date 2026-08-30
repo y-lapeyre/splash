@@ -15,7 +15,7 @@
 !  a) You must cause the modified files to carry prominent notices
 !     stating that you changed the files and the date of any change.
 !
-!  Copyright (C) 2005-2025 Daniel Price. All rights reserved.
+!  Copyright (C) 2005-2026 Daniel Price. All rights reserved.
 !  Contact: daniel.price@monash.edu
 !
 !  The plotting API for SPLASH 2.0 was written by James Wetter
@@ -55,7 +55,7 @@ program splash
 !             user-friendly interactive mode;
 !             interactive buttons now appear in the plotting window;
 !             cursor movement generates context-dependent help;
-!             cube viz: slice through data using scroll wheel on your mouse
+!             cube viz: slice through data using scroll wheel on your mouse;
 !             streamline plotting by default for vector plots;
 !             automatically detect and read phantom hdf5 chemistry data;
 !             allow simultaneous log of all abundance columns when chemistry data is present;
@@ -1285,7 +1285,7 @@ subroutine print_header
 20 format(/,  &
    '  ( B | y ) ( D | a | n | i | e | l ) ( P | r | i | c | e )',/)
 
- print "(a)",'  ( '//trim(version)//' Copyright (C) 2005-2025 )'
+ print "(a)",'  ( '//trim(version)//' Copyright (C) 2005-2026 )'
  print 30
 30 format(/,    &
    ' * SPLASH comes with ABSOLUTELY NO WARRANTY. This is ',/, &
