@@ -15,7 +15,7 @@
 !  a) You must cause the modified files to carry prominent notices
 !     stating that you changed the files and the date of any change.
 !
-!  Copyright (C) 2005-2021 Daniel Price. All rights reserved.
+!  Copyright (C) 2005-2026 Daniel Price. All rights reserved.
 !  Contact: daniel.price@monash.edu
 !
 !-----------------------------------------------------------------
@@ -30,7 +30,7 @@ module system_utils
  public :: ienvironment,lenvironment,renvironment,lenvstring,ienvstring
  public :: envlist,ienvlist,lenvlist,renvlist,rflaglist,get_command_option,count_matching_args
  public :: get_command_flag,get_user,get_copyright,get_environment_or_flag
- public :: set_environment_variable,to_utf8_safe
+ public :: set_environment_variable
  public :: get_command_option_string
 
  private
@@ -557,45 +557,8 @@ function get_copyright() result(string)
  call get_user(string)
  call date_and_time(date=year)
 
- string = '(c) '//year(1:4)//' '//trim(string)
+ string = '© '//year(1:4)//' '//trim(string)
 
 end function get_copyright
-
-pure function to_utf8_safe(str) result(out)
- character(len=*), intent(in) :: str
- character(len=:), allocatable :: out
- character(len=:), allocatable :: tmp
- integer :: i, j, ilen, b
-
- ilen = len_trim(str)
- allocate(character(len=4*ilen) :: tmp)
- j = 0; i = 1
- do while (i <= ilen)
-    b = iachar(str(i:i))
-    select case (b)
-    case (0:127)                 ! ASCII
-       j=j+1; tmp(j:j)=achar(b); i=i+1
-    case (192:223)               ! 2-byte UTF-8 start?
-       if (i<ilen .and. iachar(str(i+1:i+1))>=128 .and. iachar(str(i+1:i+1))<=191) then
-          j=j+1; tmp(j:j)=achar(b)
-          j=j+1; tmp(j:j)=achar(iachar(str(i+1:i+1)))
-          i=i+2
-       else                       ! treat as Latin-1
-          j=j+1; tmp(j:j)=achar(192 + ishft(b,-6))
-          j=j+1; tmp(j:j)=achar(128 + iand(b,63))
-          i=i+1
-       endif
-    case (224:247)               ! 3/4-byte starts: assume already UTF-8, copy bytes
-       ! minimally pass through remaining continuation bytes
-       j=j+1; tmp(j:j)=achar(b); i=i+1
-    case default                 ! Latin-1 byte (128-191 or 248-255)
-       j=j+1; tmp(j:j)=achar(192 + ishft(b,-6))
-       j=j+1; tmp(j:j)=achar(128 + iand(b,63))
-       i=i+1
-    end select
- enddo
- out = tmp(1:j)
-
-end function to_utf8_safe
 
 end module system_utils
