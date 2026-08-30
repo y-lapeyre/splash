@@ -56,10 +56,10 @@
 
 module readdata_cactus_hdf5
  implicit none
- 
- public :: read_data_cactus_hdf5, set_labels_cactus_hdf5
- 
- private 
+
+ public :: read_data_cactus_hdf5, set_labels_cactus_hdf5, file_format_is_cactus_hdf5
+
+ private
 contains
 
 subroutine read_data_cactus_hdf5(rootname,istepstart,ipos,nstepsread)
@@ -369,4 +369,22 @@ subroutine set_labels_cactus_hdf5
 !-----------------------------------------------------------
  return
 end subroutine set_labels_cactus_hdf5
+
+!-----------------------------------------------------------------
+! return true if filename is a Cactus/Carpet HDF5 dump
+!-----------------------------------------------------------------
+logical function file_format_is_cactus_hdf5(filename) result(is_cactus)
+ use asciiutils,     only:cstring
+ use cactushdf5read, only:cactus_hdf5_is_cactus_file
+ use, intrinsic :: iso_c_binding, only:c_int
+ character(len=*), intent(in) :: filename
+ integer(c_int) :: isc
+
+ is_cactus = .false.
+ if (index(filename,'.h5') == 0 .and. index(filename,'.hdf5') == 0) return
+ isc = cactus_hdf5_is_cactus_file(cstring(filename))
+ is_cactus = (isc == 1)
+
+end function file_format_is_cactus_hdf5
+
 end module readdata_cactus_hdf5

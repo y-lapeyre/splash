@@ -64,11 +64,11 @@ module readdata_tipsy
 contains
 
 subroutine read_data_tipsy(rootname,indexstart,ipos,nstepsread)
- use particle_data,  only:dat,time,npartoftype,gamma,maxpart
+ use particle_data,  only:dat,time,npartoftype,gamma,maxpart,headervals
  use params
  use settings_data,  only:ndim,ndimV,ncolumns
  use mem_allocation, only:alloc
- use labels,         only:label,ih,ipmass,irho,ivx
+ use labels,         only:label,ih,ipmass,irho,ivx,headertags
  integer, intent(in) :: indexstart,ipos
  integer, intent(out) :: nstepsread
  character(len=*), intent(in) :: rootname
@@ -205,6 +205,17 @@ subroutine read_data_tipsy(rootname,indexstart,ipos,nstepsread)
  npartoftype(2,j) = ndark
  npartoftype(3,j) = nptmass
  gamma(j) = 1.666666666667
+ !
+ !--copy named header fields for --header / legends
+ !
+ headertags(1:7) = (/'time ','ndim ','ntot ','ngas ','ndark','nstar','gamma'/)
+ headervals(1,j) = time(j)
+ headervals(2,j) = real(ndim)
+ headervals(3,j) = real(nprint)
+ headervals(4,j) = real(ngas)
+ headervals(5,j) = real(ndark)
+ headervals(6,j) = real(nptmass)
+ headervals(7,j) = gamma(j)
  j = j + 1
 
  if (allocated(npartoftype)) then

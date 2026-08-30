@@ -102,7 +102,7 @@ end module seren_data_store
 module readdata_seren
  implicit none
 
- public :: read_data_seren, set_labels_seren
+ public :: read_data_seren, set_labels_seren, file_format_is_seren
 
  private
 contains
@@ -116,13 +116,12 @@ subroutine read_data_seren(rootname,istepstart,ipos,nstepsread)
  use labels,         only:labeltype,labelzintegration,headertags,print_types
  use system_utils,   only:ienvironment
  use seren_data_store
- use asciiutils,     only:make_tags_unique
  integer, intent(in) :: istepstart,ipos
  integer, intent(out) :: nstepsread
  character(len=*), intent(in) :: rootname
  character(len=len(rootname)+10) :: datfile
  integer, parameter :: iunit = 16
- integer :: i,j,step,ierr,iambinaryfile
+ integer :: i,step,ierr,iambinaryfile
  integer :: npart_max,nstep_max
  logical :: iexist,reallocate,doubleprec
 
@@ -334,17 +333,16 @@ subroutine read_data_seren(rootname,istepstart,ipos,nstepsread)
  time(step) = timetemp
  gamma(step) = gammatemp
 
- !--identify integer header variables and copy into headervals
+ !--copy named header fields for --header / legends
  headertags(1:8) = (/'ptot      ','stot      ','pboundary ','picm      ',&
                      'pgas      ','pcdm      ','pdust     ','pion      '/)
  headervals(1:8,step) = real(idata(1:8))
-
- !--tag double precision header variables with "dp_data1,dp_data2 etc."
- do j=1,size(dpdata)
-    headertags(8+j) = 'dp_data'
-    headervals(8+j,step) = dpdata(j)
- enddo
- call make_tags_unique(8+size(dpdata),headertags)
+ headertags(9:13) = (/'time  ','gamma ','ndim  ','nunits','ndata '/)
+ headervals(9,step) = real(dpdata(1))
+ headervals(10,step) = gammatemp
+ headervals(11,step) = real(ndim)
+ headervals(12,step) = real(nunits)
+ headervals(13,step) = real(ndata)
  !
  !--read particle data
  !
@@ -1438,4 +1436,34 @@ subroutine translate_unit_names(unit_name)
 
  return
 end subroutine translate_unit_names
+
+!-----------------------------------------------------------
+! check if a file is in Seren binary or ascii dump format
+!-----------------------------------------------------------
+logical function file_format_is_seren(filename) result(is_seren)
+ character(len=*), intent(in) :: filename
+ character(len=20) :: format_id
+ integer :: iunit,ierr
+
+ is_seren = .false.
+ !
+ ! peek at the first 20 bytes (covers binary stream and ascii magic)
+ !
+ open(newunit=iunit,file=filename,status='old',form='unformatted',&
+      access='stream',iostat=ierr)
+ if (ierr /= 0) return
+ read(iunit,iostat=ierr) format_id
+ close(iunit)
+ if (ierr /= 0) return
+
+ if (index(format_id,'BINARYDUMP') > 0) then
+    is_seren = .true.
+ elseif (format_id(1:7)=='NBINARY') then
+    is_seren = .true.
+ elseif (index(format_id,'SERENASCIIDUMP') > 0) then
+    is_seren = .true.
+ endif
+
+end function file_format_is_seren
+
 end module readdata_seren

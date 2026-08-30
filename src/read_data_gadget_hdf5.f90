@@ -75,7 +75,7 @@ module readdata_gadget_hdf5
  logical :: useids = .false.
  logical :: arepo = .false.
 
- public :: read_data_gadget_hdf5, set_labels_gadget_hdf5
+ public :: read_data_gadget_hdf5, set_labels_gadget_hdf5, file_format_is_gadget_hdf5
 
  interface
   subroutine read_gadget_hdf5_header(filename,maxtypes,maxhdr,npartoftypei,massoftypei,&
@@ -103,6 +103,11 @@ module readdata_gadget_hdf5
    integer(kind=c_int), dimension(ncol), intent(in)  :: isrequired
    integer(kind=c_int), dimension(maxtypes), intent(in) :: i0
   end subroutine read_gadget_hdf5_data
+
+  integer(c_int) function gadget_hdf5_is_gadget_file(filename) bind(c)
+   import
+   character(kind=c_char), dimension(*), intent(in) :: filename
+  end function gadget_hdf5_is_gadget_file
  end interface
 
 contains
@@ -912,5 +917,21 @@ subroutine set_header_label_gadget(i,name) bind(c)
  headertags(i+1) = fstring(name)
 
 end subroutine set_header_label_gadget
+
+!-----------------------------------------------------------------
+! return true if filename is a Gadget/SWIFT/Arepo HDF5 dump
+!-----------------------------------------------------------------
+logical function file_format_is_gadget_hdf5(filename) result(is_gadget)
+ use asciiutils, only:cstring
+ use, intrinsic :: iso_c_binding, only:c_int
+ character(len=*), intent(in) :: filename
+ integer(c_int) :: isg
+
+ is_gadget = .false.
+ if (index(filename,'.h5') == 0 .and. index(filename,'.hdf5') == 0) return
+ isg = gadget_hdf5_is_gadget_file(cstring(filename))
+ is_gadget = (isg == 1)
+
+end function file_format_is_gadget_hdf5
 
 end module readdata_gadget_hdf5

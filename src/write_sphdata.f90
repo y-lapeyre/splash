@@ -105,7 +105,7 @@ subroutine write_sphdump(time,gamma,dat,npart,ntypes,npartoftype,masstype,itype,
  integer, intent(in), dimension(:), optional  :: listofcolumns
  integer, parameter :: iunit = 83
  integer, parameter :: maxline = 1000
- integer            :: ierr,i,idim,i1,i2,ncols
+ integer            :: ierr,i,idim,i1,i2,ncols,nwrite
  integer, dimension(ncolumns) :: iorder
  character(len=40)  :: fmtstring,fmtstring2,fmtstringlab,outfile
  character(len=6)   :: ext
@@ -159,6 +159,12 @@ subroutine write_sphdump(time,gamma,dat,npart,ntypes,npartoftype,masstype,itype,
        fmtstringlab = '(''#'',1x,'//trim(adjustl(fmtstringlab))//')'
     endif
 
+    if (size(itype) > 1 .and. size(itype) < npart) then
+       print "(a,i0,a,i0)",' *** ERROR: itype array (',size(itype), &
+            ') smaller than npart (',npart,') ***'
+       return
+    endif
+
     open(unit=iunit,file=trim(filename)//trim(ext),status='replace',form='formatted',iostat=ierr)
     if (ierr /= 0) then
        print "(a)",' ERROR OPENING FILE FOR WRITING'
@@ -184,10 +190,11 @@ subroutine write_sphdump(time,gamma,dat,npart,ntypes,npartoftype,masstype,itype,
     change_coordsys = (icoordsnew /= icoords .and. ndim > 0 .and. all(ix(1:ndim) > 0))
     x0 = xorigin(:)  ! note that it is not currently possible to do splash to ascii
     v0 = 0.          ! with coords set relative to a tracked particle, so just use xorigin
+    nwrite = npart
 
     if (size(itype) > 1) then
        write(iunit,fmtstringlab,iostat=ierr) label(iorder(1:ncols)),'itype'
-       do i=1,npart
+       do i=1,nwrite
           vals(1:ncolumns) = dat(i,1:ncolumns)
           if (change_coordsys) call change_coords(vals,ncolumns,ndim,icoords,icoordsnew,x0,v0)
           write(iunit,fmtstring2,iostat=ierr) vals(iorder(1:ncols)),itype(i)
@@ -195,13 +202,13 @@ subroutine write_sphdump(time,gamma,dat,npart,ntypes,npartoftype,masstype,itype,
     else
        write(iunit,fmtstringlab,iostat=ierr) label(iorder(1:ncols))
        if (change_coordsys) then
-          do i=1,npart
+          do i=1,nwrite
              vals(1:ncolumns) = dat(i,1:ncolumns)
              call change_coords(vals,ncolumns,ndim,icoords,icoordsnew,x0,v0)
              write(iunit,fmtstring,iostat=ierr) vals(iorder(1:ncols))
           enddo
        else
-          do i=1,npart
+          do i=1,nwrite
              write(iunit,fmtstring,iostat=ierr) dat(i,iorder(1:ncols))
           enddo
        endif

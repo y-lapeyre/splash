@@ -1420,7 +1420,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
  use sphNGread
  use lightcurve_utils, only:get_temp_from_u,ionisation_fraction,get_opacity
  use readcomposition,  only:check_for_composition_file,read_composition
- use byteswap,         only:bs
+ use byteswap,         only:bs,open_unformatted_endian
  use part_utils,       only:locate_nth_particle_of_type
  integer, intent(in)  :: indexstart,iposn
  integer, intent(out) :: nstepsread
@@ -1458,6 +1458,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
  real :: xHIi,xHIIi,xHeIi,xHeIIi,xHeIIIi,nei,m1,rad_corotate
  logical :: skip_corrupted_block_3,get_temperature,get_kappa,get_kappa_tot
  logical :: get_ionfrac,need_to_allocate_iphase,need_to_allocate_iorig,got_tag,got_iorig
+ logical :: other_endian
  integer(kind=8), dimension(:), allocatable :: iorig
  character(len=lentag) :: tagsreal(maxinblock), tagtmp
 
@@ -1558,7 +1559,8 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
 !
 !--open the (unformatted) binary file
 !
- open(unit=iunit,iostat=ierr,file=dumpfile,status='old',form='unformatted')
+ other_endian = .false.
+ call open_unformatted_endian(iunit,dumpfile,ierr,other_endian)
  if (ierr /= 0) then
     print "(a)",'*** ERROR OPENING '//trim(dumpfile)//' ***'
     return
@@ -1570,11 +1572,22 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
     read(iunit,iostat=ierr) intg1,r8,int2,iversion,int3
     if (intg1 /= 690706 .and. intg1 /= 060769) then
        if (bs(intg1)==690706 .or. bs(intg1)==060769) then
-          print "(a)",'*** ERROR: file is wrong endian, try:'
-          print "(/,4x,a,/,/,6x,a,/)",'export GFORTRAN_CONVERT_UNIT=big_endian','or, with ifort:'
-          print "(4x,a)",'export F_UFMTENDIAN=big'
+          print "(a)",' file is opposite endian: reopening with byte swap'
           close(iunit)
-          return
+          other_endian = .true.
+          call open_unformatted_endian(iunit,dumpfile,ierr,other_endian)
+          if (ierr /= 0) then
+             print "(a)",'*** ERROR OPENING '//trim(dumpfile)//' ***'
+             return
+          endif
+          read(iunit,iostat=ierr) intg1,r8,int2,iversion,int3
+          if (intg1 /= 690706 .and. intg1 /= 060769) then
+             print "(a)",'*** ERROR: file is wrong endian, try:'
+             print "(/,4x,a,/,/,6x,a,/)",'export GFORTRAN_CONVERT_UNIT=big_endian','or, with ifort:'
+             print "(4x,a)",'export F_UFMTENDIAN=big'
+             close(iunit)
+             return
+          endif
        else
           print "(a)",'*** ERROR READING HEADER: corrupt file/zero size/wrong endian?'
           close(iunit)
@@ -1606,7 +1619,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
     if (.not.lenvironment('SSPLASH_IGNORE_IVERSION')) then
        print "(2(/,a))",'   ** press any key to bravely proceed anyway ** ', &
                           '   (set SSPLASH_IGNORE_IVERSION=yes to silence this warning)'
-       read*
+       read(*,iostat=ierr)
     endif
  endif
 !
@@ -2282,8 +2295,10 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
  goto 34
 33 continue
  print "(/,1x,a,/)",'*** WARNING: END OF FILE DURING READ ***'
- print*,'Press any key to continue (but there is likely something wrong with the file...)'
- read*
+ if (iverbose >= 0) then
+    print*,'Press any key to continue (but there is likely something wrong with the file...)'
+    read(*,iostat=ierr)
+ endif
 34 continue
 
  !
@@ -2295,7 +2310,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
  !
  if (phantomdump .and. idivvxcol /= 0 .and. any(required(idivvxcol:icurlvzcol))) then
     print "(a)",' reading divv from '//trim(dumpfile)//'.divv'
-    open(unit=66,file=trim(dumpfile)//'.divv',form='unformatted',status='old',iostat=ierr)
+    call open_unformatted_endian(66,trim(dumpfile)//'.divv',ierr,other_endian)
     if (ierr /= 0) then
        print "(a)",' ERROR opening '//trim(dumpfile)//'.divv'
     else
@@ -2345,6 +2360,11 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
                 if (dat(i,ih,j) <= 0. .and. itype /= itypemap_sink_phantom) iamtype(i,j) = itypemap_unknown_phantom
              endif
           enddo
+          if (nptmasstot > 0) then
+             do i=npart+1,npart+nptmasstot
+                iamtype(i,j) = int(itypemap_sink_phantom,kind=int1)
+             enddo
+          endif
        else
           !
           !--sphNG: translate iphase to splash types
@@ -2375,7 +2395,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
        if (phantomdump) then
           print*,'ERROR: low memory mode will not work correctly with phantom + multiple types'
           print*,'press any key to ignore this and continue anyway (at your own risk...)'
-          read*
+          read(*,iostat=ierr)
        endif
 !
 !--place point masses after normal particles
@@ -2507,9 +2527,27 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
     npartoftype(5,j) = nstar
     npartoftype(6,j) = nunknown
  else
-    if (debug) print*,' DEBUG: nunknown = ',nunknown
-    npartoftype(1,j) = npartoftype(1,j) - nunknown
-    npartoftype(itypemap_unknown_phantom,j) = npartoftype(itypemap_unknown_phantom,j) + nunknown
+    if (size(iamtype(:,j)) > 1) then
+       !
+       !--reconcile npartoftype with particles actually read; header npartoftype
+       !  tags can exceed npart+nptmasstot when dump bookkeeping is stale (e.g.
+       !  accreted particles removed from the array but still counted in header)
+       !
+       npartoftype(:,j) = 0
+       do i=1,npart
+          itype = int(iamtype(i,j))
+          if (itype >= 1 .and. itype <= ntypes) then
+             npartoftype(itype,j) = npartoftype(itype,j) + 1
+          else
+             npartoftype(itypemap_unknown_phantom,j) = npartoftype(itypemap_unknown_phantom,j) + 1
+          endif
+       enddo
+       if (nptmasstot > 0) npartoftype(itypemap_sink_phantom,j) = nptmasstot
+    else
+       if (debug) print*,' DEBUG: nunknown = ',nunknown
+       npartoftype(1,j) = npartoftype(1,j) - nunknown
+       npartoftype(itypemap_unknown_phantom,j) = npartoftype(itypemap_unknown_phantom,j) + nunknown
+    endif
  endif
 
 

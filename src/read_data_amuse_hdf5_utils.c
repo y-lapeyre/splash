@@ -355,3 +355,46 @@ int read_amuse_hdf5_dataset(hid_t group_id,
 }
 
 
+
+/*
+ * return 1 if filename looks like AMUSE HDF5
+ * (particles/0000000001 group structure)
+ */
+int amuse_hdf5_is_amuse_file(char *filename)
+{
+    hid_t file_id, particles_id, set_id;
+    int is_amuse = 0;
+    herr_t HDF5_error = -1;
+
+    file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
+    if (file_id == HDF5_error)
+        return 0;
+    if (!checkfordataset(file_id, "particles")) {
+        H5Fclose(file_id);
+        return 0;
+    }
+#if H5_VERSION_GE(1,8,0)
+    particles_id = H5Gopen2(file_id, "particles", H5P_DEFAULT);
+#else
+    particles_id = H5Gopen(file_id, "particles");
+#endif
+    if (particles_id == HDF5_error) {
+        H5Fclose(file_id);
+        return 0;
+    }
+    /* AMUSE stores particle sets under zero-padded numeric group names */
+    if (checkfordataset(particles_id, "0000000001")) {
+#if H5_VERSION_GE(1,8,0)
+        set_id = H5Gopen2(particles_id, "0000000001", H5P_DEFAULT);
+#else
+        set_id = H5Gopen(particles_id, "0000000001");
+#endif
+        if (set_id != HDF5_error) {
+            is_amuse = 1;
+            H5Gclose(set_id);
+        }
+    }
+    H5Gclose(particles_id);
+    H5Fclose(file_id);
+    return is_amuse;
+}

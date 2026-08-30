@@ -81,6 +81,11 @@ module amusehdf5read
    integer(kind=c_int), intent(out) :: ierr
    integer(kind=c_int), dimension(ncol), intent(in)  :: isrequired
   end subroutine read_amuse_hdf5_data
+
+  integer(c_int) function amuse_hdf5_is_amuse_file(filename) bind(c)
+   import
+   character(kind=c_char), dimension(*), intent(in) :: filename
+  end function amuse_hdf5_is_amuse_file
  end interface
 
 end module amusehdf5read
@@ -94,7 +99,7 @@ end module amusehdf5read
 module readdata_amuse_hdf5
  implicit none
 
- public :: read_data_amuse_hdf5, set_labels_amuse_hdf5
+ public :: read_data_amuse_hdf5, set_labels_amuse_hdf5, file_format_is_amuse_hdf5
 
  private
 contains
@@ -391,4 +396,22 @@ subroutine set_blocklabel(icol,name) bind(c)
  !print*,icol,' name = ',trim(blocklabel(icol))
 
 end subroutine set_blocklabel
+
+!-----------------------------------------------------------------
+! return true if filename is an AMUSE HDF5 dump
+!-----------------------------------------------------------------
+logical function file_format_is_amuse_hdf5(filename) result(is_amuse)
+ use asciiutils,     only:cstring
+ use amusehdf5read,  only:amuse_hdf5_is_amuse_file
+ use, intrinsic :: iso_c_binding, only:c_int
+ character(len=*), intent(in) :: filename
+ integer(c_int) :: isa
+
+ is_amuse = .false.
+ if (index(filename,'.h5') == 0 .and. index(filename,'.hdf5') == 0) return
+ isa = amuse_hdf5_is_amuse_file(cstring(filename))
+ is_amuse = (isa == 1)
+
+end function file_format_is_amuse_hdf5
+
 end module readdata_amuse_hdf5

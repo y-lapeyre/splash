@@ -666,3 +666,21 @@ void get_mass_info(hid_t group_id, char *name, int *rank)
     }
     return;
 }
+
+/*
+ * return 1 if filename looks like Gadget/SWIFT/Arepo HDF5 (has Header group)
+ */
+int gadget_hdf5_is_gadget_file(char *filename)
+{
+    hid_t file_id;
+    int is_gadget = 0;
+    herr_t HDF5_error = -1;
+
+    file_id = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
+    if (file_id == HDF5_error)
+        return 0;
+    if (checkfordataset(file_id, "Header"))
+        is_gadget = 1;
+    H5Fclose(file_id);
+    return is_gadget;
+}
