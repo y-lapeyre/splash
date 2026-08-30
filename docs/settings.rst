@@ -1985,10 +1985,7 @@ position of the surface. Only applies to 3D data. When set with
 cross-section (instead of projection), particles at or below the z value
 of the slice are used.
 
-For examples of the 3D surface rendering in splash , have a look at my
-movies of neutron star mergers:
-
-   http://users.monash.edu.au/~dprice/research/nsmag.
+For examples of 3D surface rendering in splash, see :ref:`sec:advanced`.
 
 Plotting 3D box / 3D axes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
