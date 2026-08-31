@@ -61,11 +61,26 @@ ensure_meson() {
    py_bin="$(dirname "$py")"
    pip_user_bin="$("$py" -m site --user-base)/bin"
    export PATH="$py_bin:$pip_user_bin:$HOME/.local/bin:$PATH"
+   if command -v brew >/dev/null 2>&1; then
+      export PATH="$(brew --prefix)/bin:$PATH"
+   fi
    if meson_version_ok; then
       return 0
    fi
+   if [ "$(uname)" = Darwin ] && command -v brew >/dev/null 2>&1; then
+      echo ":: installing meson via brew"
+      brew install meson
+      export PATH="$(brew --prefix)/bin:$PATH"
+      if meson_version_ok; then
+         return 0
+      fi
+   fi
    echo ":: installing meson >= 1.3.0 via pip ($py)"
    pip_args=()
+   if [ "$(uname)" = Darwin ]; then
+      # Homebrew Python is PEP 668 externally-managed
+      pip_args+=(--break-system-packages)
+   fi
    if [ "$(id -u)" -ne 0 ]; then
       pip_args+=(--user)
    fi

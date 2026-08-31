@@ -10,7 +10,7 @@ on:
     - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-binaries:
@@ -87,10 +87,6 @@ jobs:
     - name: get a copy of giza
       run: git clone https://github.com/danieljprice/giza
 
-    - name: Set prefix (macOS)
-      if: runner.os == 'macOS'
-      run: echo "PREFIX=$(brew --prefix)" >> "$GITHUB_ENV"
-
     - name: compile splash binary
       run: |
         if [ "$RUNNER_OS" == "macOS" ]; then
@@ -106,11 +102,13 @@ jobs:
              echo "ERROR: HDF5 or its compression libs are still dynamically linked"
              exit 1
            fi
+           if ! otool -L bin/splash | grep -q '/opt/X11/lib/libcairo'; then
+             echo "ERROR: splash is not linked against XQuartz libcairo"
+             exit 1
+           fi
            bin/splash -help
         else
            CAIRO_PREFIX=$HOME/local/cairo
-           export CAIRO_PREFIX
-           # meson may use lib or lib64 depending on the platform; prefer an explicit --libdir=lib
            CAIRO_LIBDIR=""
            for d in "$CAIRO_PREFIX/lib" "$CAIRO_PREFIX/lib64"; do
              if [ -f "$d/libcairo.a" ] && [ -f "$d/libpixman-1.a" ]; then
@@ -120,14 +118,10 @@ jobs:
            done
            test -n "$CAIRO_LIBDIR" || { echo "ERROR: libcairo.a/libpixman-1.a not found under $CAIRO_PREFIX"; exit 1; }
            export PKG_CONFIG_PATH="$CAIRO_LIBDIR/pkgconfig:${PKG_CONFIG_PATH:-}"
-           # Static libcairo.a needs full transitive deps at link time (Xrender, Xext, freetype, etc.)
            CAIRO_SYS_LIBS=$(pkg-config --libs freetype2 fontconfig libpng xrender x11 expat 2>/dev/null || true)
            CAIRO_SYS_LIBS="$CAIRO_SYS_LIBS -lXext -lz -lm"
            export CAIRO_LIBS="$CAIRO_LIBDIR/libcairo.a $CAIRO_LIBDIR/libpixman-1.a $CAIRO_SYS_LIBS"
-           # X11 deps are in CAIRO_LIBS; keep X11_LIBS empty so LDFLAGS order is
-           # PGPLOTLIBS (giza, cairo, then system libs) not X11 before cairo
            export X11_LIBS=""
-           # giza uses #include <cairo/cairo.h>, so -I must point at include/ not include/cairo/
            export CAIRO_CFLAGS="-I$CAIRO_PREFIX/include"
            test -f "$CAIRO_PREFIX/include/cairo/cairo.h" || { echo "ERROR: cairo header not found at $CAIRO_PREFIX/include/cairo/cairo.h"; exit 1; }
            make -j 4 SYSTEM=gfortran CC=${{ env.CC }} withgiza HDF5=yes FITS=yes \
@@ -233,6 +227,8 @@ jobs:
   release:
     needs: binaries
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - name: checkout code
       uses: actions/checkout@v5
@@ -289,11 +285,13 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set up Homebrew
+      if: github.repository == 'danieljprice/splash'
       id: set-up-homebrew
       uses: Homebrew/actions/setup-homebrew@master
 
     - name: Bump Brew
       if: github.repository == 'danieljprice/splash'
+      continue-on-error: true
       env:
         HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.BREW_TOKEN_SPLASH }}
         version: ${{ env.version }}

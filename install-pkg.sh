@@ -27,13 +27,14 @@ pkg_name=$(basename $pkg_name .tar.xz)
 extension=${distfile/$pkg_name/}
 pkg_dir=${distfile/$extension/};
 #
-#--parallel make flags
+#--parallel make: inherit MAKEFLAGS from the environment when set;
+# otherwise pass an explicit -j flag to make.
 #
-if [ -n "$MAKEFLAGS" ]; then
-   make_j="$MAKEFLAGS"
-else
+if [ -z "${MAKEFLAGS:-}" ]; then
    nproc_val=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
    make_j="-j${nproc_val}"
+else
+   make_j=""
 fi
 #
 #--Check that the install dir is present.
