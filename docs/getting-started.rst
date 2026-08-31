@@ -14,7 +14,9 @@ Mac OS via homebrew (recommended)::
   brew tap danieljprice/all
   brew install splash
 
-You will also need to install `Xquartz <https://www.xquartz.org>`_ so that the X-windows server launches automatically.
+You will need `Xquartz <https://www.xquartz.org>`_ if you plan to use the
+``/xw`` interactive device. On macOS you can alternatively use the native
+``/osx`` device (see :ref:`tab:devices`) and avoid installing Xquartz.
 
 Mac OS via Macports::
 
@@ -203,17 +205,19 @@ Other supported formats are listed in :ref:`tab:otherreads`, but these require a
    +------------------------------+----------------------------+-------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | ``splash -phantom <file>``   | sphNG, Phantom             | ``read_data_sphNG.f90``       | sphNG is Matthew Bate's SPH code. Option ``-sphng`` also  works.                                                                                                                                                                                  |
    +------------------------------+----------------------------+-------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | ``splash -magma <file>``     | magma                      | ``read_data_srosph.f90``      | Stephan Rosswog's  code                                                                                                                                                                                                                           |
+   | ``splash -magma <file>``     | magma                      | ``read_data_sro.f90``         | Stephan Rosswog's code (options ``-sro`` or ``-srosph`` also work)                                                                                                                                                                                |
    +------------------------------+----------------------------+-------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | ``splash -seren <file>``     | seren                      | ``read_data_seren.f90``       | The SEREN SPH code (Hubber, McLeod et  al.)                                                                                                                                                                                                       |
    +------------------------------+----------------------------+-------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | ``splash -gasoline <file>``  | gasoline, tipsy            | ``read_data_tipsy.f90``       | Reads both binary and ascii TIPSY files (determined automatically). Option ``-tipsy`` also  works.                                                                                                                                                |
    +------------------------------+----------------------------+-------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | ``splash -vine <file>``      | vine                       | ``read_data_fine.f90``        | See environment variable  options.                                                                                                                                                                                                                |
+   | ``splash -vine <file>``      | vine                       | ``read_data_VINE.f90``        | See environment variable  options.                                                                                                                                                                                                                |
    +------------------------------+----------------------------+-------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |``splash -starsmasher <file>``| StarSmasher                | ``read_data_starsmasher.f90`` | The `StarSmasher <http://jalombar.github.io/starsmasher/>`_ code (Gaburov et al. 2018)                                                                                                                                                            |
    +------------------------------+----------------------------+-------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | ``splash file.vtk``          | vtk legacy binary          | ``read_data_vtk.f90``         | VTK legacy binary format (UNSTRUCTURED_GRID and STRUCTURED_GRID), e.g. from Shamrock code                                                                                                                                                                                                 |
+   | ``splash -shamrock <file>``  | shamrock                   | ``read_data_shamrock.f90``    | Native Shamrock particle format (automatically recognised)                                                                                                                                                                                        |
+   +------------------------------+----------------------------+-------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | ``splash file.vtk``          | vtk legacy binary          | ``read_data_vtk.f90``         | VTK legacy binary format (UNSTRUCTURED_GRID and STRUCTURED_GRID), e.g. from Idefix                                                                                                                                                                  |
    +------------------------------+----------------------------+-------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Below is a list of the supported data formats that require ``HDF5``.
@@ -230,7 +234,9 @@ Below is a list of the supported data formats that require ``HDF5``.
    +--------------------------------+------------------------+-------------------------------+-----------------------------------------------------------------------------------------+
    | ``splash -cactus_hdf5 <file>`` | Cactus HDF5            | ``read_data_cactus_hdf5.f90`` |                                                                                         |
    +--------------------------------+------------------------+-------------------------------+-----------------------------------------------------------------------------------------+
-   | ``splash -flash_hdf5 <file>``  | FLASH tracer particles | ``read_dataflash_hdf5.f90``   | Reads tracer particle output from the FLASH code. The option ``-flash`` will also work. |
+   | ``splash -flash_hdf5 <file>``  | FLASH tracer particles | ``read_data_flash_hdf5.f90``  | Reads tracer particle output from the FLASH code. The option ``-flash`` will also work. |
+   +--------------------------------+------------------------+-------------------------------+-----------------------------------------------------------------------------------------+
+   | ``splash -phantom_hdf5 <file>``| Phantom HDF5           | ``read_data_phantom_hdf5.f90``| Phantom/sphNG HDF5 dumps; chemistry abundance columns detected automatically when present |
    +--------------------------------+------------------------+-------------------------------+-----------------------------------------------------------------------------------------+
    | ``splash -falcon_hdf5 <file>`` | falcON                 | ``read_data_falcON_hdf5.f90`` | Walter Dehnen's SPH code format. The option ``-falcon`` will also work.                 |
    +--------------------------------+------------------------+-------------------------------+-----------------------------------------------------------------------------------------+
@@ -280,6 +286,9 @@ Typing ``splash --help`` gives a complete and up-to-date list of options. Curren
     -360              : set default options suited to 360 video
     -b, --buffer      : buffer all data files into memory
     -o pixformat      : dump pixel map in specified format (use just -o for list of formats)
+    --header          : print dump file header tags and values, then exit
+    --labels          : print column labels one per line, then exit
+    --labelsorig      : print original column labels (no units), then exit
     
    Command line plotting mode:
     
@@ -289,13 +298,14 @@ Typing ``splash --help`` gives a complete and up-to-date list of options. Curren
     -vec[tor] column  : vector quantity to plot with arrows
     -c[ontour] column : contoured quantity
     -multi            : multiplot
-    -dev device       : specify plotting device on command line (e.g. -dev /xw)
+    -dev device       : specify plotting device on command line (e.g. -dev /xw or -dev /osx)
     --movie           : shortcut for -dev /mp4 to make a movie from plot sequence
     --xsec=1.0        : specify location of cross section slice
     --kappa=1.0       : specify opacity, and turn on opacity rendering
     --anglex=30       : rotate around x axis (similarly --angley, --anglez)
     --code            : enforce code units (also --codeunits)
     --sink=1          : centre on sink particle number 1
+    --origin=1,0,0    : centre on specified x,y,z coordinates
     --origin=666      : set coordinate system origin to particle number 666
     --origin=maxdens  : set coordinate system origin to particle at maximum density
     --track=666       : track particle number 666
@@ -308,6 +318,8 @@ Typing ``splash --help`` gives a complete and up-to-date list of options. Curren
     
     -ascii,-csv          : ascii text/csv format (default)
     -phantom -sphng      : Phantom and sphNG codes (auto)
+    -phantom_hdf5        : Phantom HDF5 dumps (auto; incl. chemistry data)
+    -shamrock            : Shamrock code (auto)
     -vtk                 : vtk legacy binary format (auto)
     -ndspmhd             : ndspmhd code (auto)
     -gandalf,-seren      : Gandalf/Seren code
@@ -332,6 +344,7 @@ Typing ``splash --help`` gives a complete and up-to-date list of options. Curren
                          enddo
            to phantom : convert SPH data to binary dump file for PHANTOM
            to gadget  : convert SPH data to default GADGET snapshot file format
+           to ndspmhd : convert SPH data to ndspmhd binary dump file (.dat)
 
     Grid conversion mode ("splash to X dumpfiles"):
        splash to grid         : interpolate basic SPH data (density, plus velocity if present in data)
@@ -737,9 +750,9 @@ Probably the most useful is the ability to change font:
    export GIZA_FONT='Helvetica'
 
 where the name is a reasonable guess as to the font you want to use (the
-default is ``Times``). In particular, if you are having trouble displaying
-unicode characters such as greek letters, you can just change the font
-until you find one that works.
+default is ``Helvetica`` unless ``GIZA_FONT`` is set). In particular, if you
+are having trouble displaying unicode characters such as greek letters, you
+can change the font until you find one that works.
 
 Endian changing
 ~~~~~~~~~~~~~~~~

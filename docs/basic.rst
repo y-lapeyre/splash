@@ -75,8 +75,8 @@ should be directed.
 Some of the most useful devices are given
 in :ref:`tab:devices`. In the above we have selected
 the X-window driver which means that the output is sent to the screen
-(provided X-windows is running), as demonstrated in the screenshot shown
-in :numref:`fig:rhoh`.
+(provided X-windows is running). On macOS you can use the native
+``/osx`` device instead (no Xquartz required); see :numref:`fig:rhoh`.
 
 
 .. figure:: figs/rhoh.jpg
@@ -102,8 +102,11 @@ in :numref:`fig:rhoh`.
    | ``/pdf``        | PDF             | ``/null``       | null device (no   |
    |                 |                 |                 | output)           |
    +-----------------+-----------------+-----------------+-------------------+
-   | ``/ps``         | Postscript (all | ``/mp4``        | mpeg4 animation   |
-   |                 | pages in one    |                 | (requires ffmpeg) |
+   | ``/osx``        | macOS native    | ``/mp4``        | mpeg4 animation   |
+   |                 | (interactive)   |                 | (requires ffmpeg) |
+   +-----------------+-----------------+-----------------+-------------------+
+   | ``/ps``         | Postscript (all |                 |                   |
+   |                 | pages in one    |                 |                   |
    |                 | file)           |                 |                   |
    +-----------------+-----------------+-----------------+-------------------+
 
@@ -491,8 +494,12 @@ log in using ssh with X-windows forwarding, e.g.::
 
    ssh -Y dprice@gadi.nci.org.au
 
-Then just plot to an interactive device (``/xw``) as usual and everything
+Then plot to an interactive device (``/xw``) as usual and everything
 in :ref:`sec:interactive` should *just work*.
+
+On a local Mac you do not need X forwarding: use the native ``/osx`` device
+at the graphics prompt (or ``-dev /osx`` on the command line) instead of
+``/xw``.
 
 splash has few dependencies and is simple to :ref:`install in your home space <installhome>` if necessary.
 That said, it is always a good idea to get admins to install a shared package for all users.

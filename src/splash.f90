@@ -15,7 +15,7 @@
 !  a) You must cause the modified files to carry prominent notices
 !     stating that you changed the files and the date of any change.
 !
-!  Copyright (C) 2005-2025 Daniel Price. All rights reserved.
+!  Copyright (C) 2005-2026 Daniel Price. All rights reserved.
 !  Contact: daniel.price@monash.edu
 !
 !  The plotting API for SPLASH 2.0 was written by James Wetter
@@ -51,17 +51,22 @@ program splash
 !
 !     -------------------------------------------------------------------------
 !     Version history/ Changelog:
-!     4.0.0   : (13/08/26)
+!     4.0.0   : (31/08/26)
 !             user-friendly interactive mode;
 !             interactive buttons now appear in the plotting window;
 !             cursor movement generates context-dependent help;
-!             cube viz: slice through data using scroll wheel on your mouse
-!             added --limits=min,max flag to set coordinate limits;
-!             added --lim=halfwidth flag to set coordinate limits to centred box;
-!             flags --xmin,--xmax,--ymin,--ymax,--zmin,--zmax override limits in splash.limits file;
+!             cube viz: slice through data using scroll wheel on your mouse;
+!             streamline plotting by default for vector plots;
+!             automatically detect and read phantom hdf5 chemistry data;
+!             allow simultaneous log of all abundance columns when chemistry data is present;
+!             added --limits=min,max flag and --xmin,--xmax flags to override limits in splash.limits file;
+!             added --lim=1.0 flag to set coordinate limits to centred box;
 !             flags --xminmargin,--xmaxmargin,--yminmargin,--ymaxmargin to adjust page margins;
 !             vector plot legend defaults to the same vertical position as the time legend;
-!             interactive rubber-band kept grey
+!             fixed bugs with utf8 symbols in giza, copyright symbol added to copyright string;
+!             splash to ndspmhd converter added;
+!             splash compiles with aocc compiler, added CI checks for ifx and aocc compilers;
+!             new /osx device for interactive plotting on macOS
 !     3.12.0  : (16/03/26)
 !             sub-pixel interpolation in splash to grid for non-Cartesian geometries;
 !             added --fcol flag in splash calc lightcurve for spectral hardening factor;
@@ -689,7 +694,7 @@ program splash
  character(len=120) :: string,exactfile
  character(len=12)  :: convertformat
  character(len=lenlabel) :: stringx,stringy,stringr,stringc,stringv
- character(len=*), parameter :: version = 'v4.0.0 [19th Mar 2026]'
+ character(len=*), parameter :: version = 'v4.0.0 [31st Aug 2026]'
 
  !
  ! initialise some basic code variables
@@ -1280,7 +1285,7 @@ subroutine print_header
 20 format(/,  &
    '  ( B | y ) ( D | a | n | i | e | l ) ( P | r | i | c | e )',/)
 
- print "(a)",'  ( '//trim(version)//' Copyright (C) 2005-2025 )'
+ print "(a)",'  ( '//trim(version)//' Copyright (C) 2005-2026 )'
  print 30
 30 format(/,    &
    ' * SPLASH comes with ABSOLUTELY NO WARRANTY. This is ',/, &
