@@ -2089,7 +2089,8 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
                          do i=1,int(isize(iarr),kind=kind(i))
                             if (abs(dat(npart+i,ih,j)) < tiny(0.)) then
                                dat(npart+i,ih,j) = real(dattemp(i))
-                               if (i == 1 .and. iverbose >= 0) print*,'zero accretion radius: taking sink particle radius from softening length'
+                               if (i == 1 .and. iverbose >= 0) &
+                                  print*,'zero accretion radius: taking sink particle radius from softening length'
                             endif
                          enddo
                       elseif (trim(tagtmp)=='Reff' .and. ih > 0) then
@@ -2126,7 +2127,8 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
                          do i=1,int(isize(iarr),kind=kind(i))
                             if (abs(dat(npart+i,ih,j)) < tiny(0.)) then
                                dat(npart+i,ih,j) = real(dattempsingle(i))
-                               if (i == 1 .and. iverbose >= 0) print*,'zero accretion radius: taking sink particle radius from softening length'
+                               if (i == 1 .and. iverbose >= 0) &
+                                  print*,'zero accretion radius: taking sink particle radius from softening length'
                             endif
                          enddo
                       else
