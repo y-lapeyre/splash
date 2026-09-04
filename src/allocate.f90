@@ -34,6 +34,7 @@ contains
 !----------------------------------------------------------------------------
 subroutine alloc(npartin,nstep,ncolumnsin,mixedtypes)
  use particle_data
+ use settings_data, only:iverbose
  integer, intent(in) :: npartin,nstep,ncolumnsin
  logical, intent(in), optional :: mixedtypes
  integer :: maxpartold,maxstepold,maxcolold
@@ -97,7 +98,7 @@ subroutine alloc(npartin,nstep,ncolumnsin,mixedtypes)
     if (maxpart /= npartin) reallocate_part = .true.
     if (maxstep /= nstep) reallocate_step = .true.
 
-    if (npartin > 1000000) print 10,'> reallocating memory:',npartin,nstep,ncolumns
+    if (npartin > 1000000 .and. iverbose >= 0) print 10,'> reallocating memory:',npartin,nstep,ncolumns
 10  format (a,' parts = ',i10,' steps = ',i6,' cols = ',i4)
     allocate(dattemp(maxpartold,maxcolold,maxstepold), stat=ierr)
     if (ierr /= 0) stop 'error allocating memory (dattemp)'
@@ -152,7 +153,7 @@ subroutine alloc(npartin,nstep,ncolumnsin,mixedtypes)
     endif
 
  else
-    if (npartin > 1000000) print 10,'> allocating memory:',npartin,nstep,ncolumns
+    if (npartin > 1000000 .and. iverbose >= 0) print 10,'> allocating memory:',npartin,nstep,ncolumns
     maxpart = npartin
     maxstep = nstep
     maxcol = ncolumns

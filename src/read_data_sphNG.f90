@@ -75,6 +75,7 @@ module sphNGread
  logical :: phantomdump,smalldump,mhddump,rtdump,usingvecp,igotmass,h2chem,rt_in_header
  logical :: usingeulr,cleaning
  logical :: batcode,tagged,debug
+ logical :: extra_rho_column,got_rho_from_file
  integer, parameter :: maxarrsizes = 10
  integer, parameter :: maxinblock = 128 ! max allowed in each block
  integer, parameter :: lentag = 16
@@ -1047,6 +1048,7 @@ integer function assign_column(tag,iarr,ipos,ikind,imaxcolumnread,idustarr,ncols
        icolumn = ih
     case('rho')
        icolumn = irho
+       got_rho_from_file = .true.
     case('dustfracsum')
        idustarr = idustarr + 1
        icolumn = nhydroarrays + idustarr
@@ -1173,6 +1175,27 @@ integer function extract_ndusttypes(tags,tagsreal,intarr,nints) result(ndusttype
  ndusttypes = idust
 
 end function extract_ndusttypes
+
+!---------------------------------------------------------------
+! density is reconstructable from m and h, so phantom dumps
+! reserve an extra column for it. If rho was also written to
+! the file, that reserved slot is unused: drop it.
+!---------------------------------------------------------------
+subroutine drop_extra_rho_column(ncolstep,ncolumns)
+ use labels, only:set_abundance_column_range
+ integer, intent(inout) :: ncolstep,ncolumns
+
+ if (.not.(extra_rho_column .and. got_rho_from_file)) return
+ extra_rho_column = .false.
+ ncolstep = ncolstep - 1
+ ncolumns = ncolumns - 1
+ if (icomp_col_start > 0) then
+    icomp_col_start = icomp_col_start - 1
+    call set_abundance_column_range(icomp_col_start, ncomp)
+ endif
+ if (ncolstepfirst > ncolstep) ncolstepfirst = ncolstep
+
+end subroutine drop_extra_rho_column
 
 subroutine get_rho_from_h(i1,i2,ih,ipmass,irho,required,npartoftype,massoftype,hfact,dat,iphase,nkilled)
  integer,            intent(in)    :: i1,i2,ih,ipmass,irho
@@ -1492,6 +1515,9 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
  tfreefall   = 1.d0
  gotbinary   = .false.
  gotiphase   = .false.
+ extra_rho_column = .false.
+ got_rho_from_file = .false.
+ tagarr = ' '
  skip_corrupted_block_3 = .false.
  got_iorig = .false.
 
@@ -1804,6 +1830,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
        !  and divv, if a .divv file exists
        if (phantomdump) then
           ncolstep = ncolstep + 1
+          extra_rho_column = .true.
           ! make extra columns in the same place every time
           if (maxcol==0) then
              ncolstepfirst = ncolstep   !  save number of columns
@@ -2003,7 +2030,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
              read(iunit,end=33,iostat=ierr) level
              ! m = m/2**(level-1)
              massfac(1:isize(iarr)) = real(1./2**(level(1:isize(iarr))-1),kind=kind(massfac))
-             if (iblock==1) print "(a,i2)",' :: '//trim(tagtmp)//' max level = ',maxval(level)
+             if (iblock==1 .and. iverbose >= 0) print "(a,i2)",' :: '//trim(tagtmp)//' max level = ',maxval(level)
              deallocate(level)
           case default
              read(iunit,end=33,iostat=ierr)
@@ -2062,7 +2089,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
                          do i=1,int(isize(iarr),kind=kind(i))
                             if (abs(dat(npart+i,ih,j)) < tiny(0.)) then
                                dat(npart+i,ih,j) = real(dattemp(i))
-                               if (i == 1) print*,'zero accretion radius: taking sink particle radius from softening length'
+                               if (i == 1 .and. iverbose >= 0) print*,'zero accretion radius: taking sink particle radius from softening length'
                             endif
                          enddo
                       elseif (trim(tagtmp)=='Reff' .and. ih > 0) then
@@ -2099,7 +2126,7 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
                          do i=1,int(isize(iarr),kind=kind(i))
                             if (abs(dat(npart+i,ih,j)) < tiny(0.)) then
                                dat(npart+i,ih,j) = real(dattempsingle(i))
-                               if (i == 1) print*,'zero accretion radius: taking sink particle radius from softening length'
+                               if (i == 1 .and. iverbose >= 0) print*,'zero accretion radius: taking sink particle radius from softening length'
                             endif
                          enddo
                       else
@@ -2287,6 +2314,8 @@ subroutine read_data_sphNG(rootname,indexstart,iposn,nstepsread)
              endif
           enddo
        endif
+       ! density was in the dump: drop the extra column reserved for rho(h)
+       if (iarr==1) call drop_extra_rho_column(ncolstep,ncolumns)
     enddo ! over array sizes
  enddo over_MPIblocks
 !
